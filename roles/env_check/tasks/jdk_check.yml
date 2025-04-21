@@ -4,9 +4,10 @@
     - name: 检查JDK安装目录是否存在
       stat:
         path: "{{ env.java.home }}"
+        follow: yes
       register: java_home_stat
 
-    - name: 断言目录有效性
+    - name: 断言JDK安装目录有效性
       assert:
         that:
           - java_home_stat.stat.exists
@@ -16,45 +17,63 @@
 
 - name: 验证Java可执行文件
   block:
-    - name: 检查java可执行文件
+    - name: 检查Java可执行文件是否存在
       stat:
         path: "{{ env.java.home }}/bin/java"
       register: java_exec_stat
 
-    - name: 断言可执行文件有效性
+    - name: 断言Java可执行文件为常规文件
       assert:
         that:
           - java_exec_stat.stat.exists
           - java_exec_stat.stat.isreg
-          - (java_exec_stat.stat.mode | int) & 0o111 != 0  # 位运算检查执行权限
+        fail_msg: "Java可执行文件不存在或不是常规文件: {{ env.java.home }}/bin/java"
+
+    - name: 获取Java原始版本信息
+      command: "{{ env.java.home }}/bin/java -version"
+      register: java_version_result
+      ignore_errors: yes
+      changed_when: false
+
+    - name: 格式化Java原始版本信息
+      set_fact:
+        java_raw_output: >-
+          {{
+            ((java_version_result.stderr | default('')).split('\n') | first)
+            | regex_search('\"(.*?)\"')
+            | regex_replace('\"', '')
+          }}
+
+    - name: 检查原始版本
+      debug:
+        msg: "{{java_raw_output}}"
+
+    - name: 断言Java执行文件可以正常执行
+      assert:
+        that:
+          - not java_version_result.failed
         fail_msg: |
-          Java可执行文件验证失败: {{ env.java.home }}/bin/java
+          Java无法执行: {{ env.java.home }}/bin/java
+          错误信息: "{{ java_version_result.msg }}"
+          原始输出: "{{ java_raw_output }}"
           可能原因:
-          1. 文件不存在
-          2. 不是常规文件
-          3. 缺少执行权限 (当前权限: {{ java_exec_stat.stat.mode | oct }})
-        success_msg: "Java可执行文件验证通过: {{ env.java.home }}/bin/java"
+          1. 缺少执行权限
+          2. 文件损坏
+          3. 不是有效的可执行文件
+        success_msg: "Java可执行性验证通过"
 
 - name: 检查Java版本
   block:
-    - name: 获取Java版本信息
-      command: "{{ env.java.home }}/bin/java -version"
-      register: java_version_check
-      changed_when: false
-      ignore_errors: yes
-
-    - name: 断言版本匹配
+    - name: 断言Java版本匹配
       assert:
         that:
-          - not java_version_check.failed
-          - java_version_check.stderr is regex('version "{{ env.java.version }}[\\\\.\\\\-]')
-        success_msg: "Java版本验证通过 (要求: {{ env.java.version }}, 实际: {{ java_version_check.stderr | regex_search('version \"([0-9.]+)', '\\1') | first }})"
+          - "java_raw_output.startswith(env.java.version ~ '.') or java_raw_output == env.java.version"
         fail_msg: |
           Java版本不匹配！
           要求版本: {{ env.java.version }}
-          实际输出: {{ java_version_check.stderr | default('无版本信息') | trim }}
+          实际输出: {{ java_raw_output }}
           可能原因:
           1. JAVA_HOME路径错误: {{ env.java.home }}
           2. 未安装JDK {{ env.java.version }}
-          3. 环境变量未生效
+        success_msg: "Java版本验证通过, 要求版本: {{ env.java.version }}，实际版本: {{ java_raw_output }}"
   when: env.java.version is defined
