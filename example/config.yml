@@ -1,0 +1,47 @@
+# 环境配置
+env:
+  java:
+    version: 11
+    home: "/usr/lib/jvm/java-11-openjdk-amd64"
+
+# 多实例
+replica:
+  # 如果不写则默认获取项目下的静态清单
+  dync:
+    # 动态清单获取url
+    url: "http://localhost:9999/cloud_inventory?id={{service.name}}"
+
+# 服务元数据
+service:
+  name: "example-server"
+  display_name: "示例服务"
+  version: "1.2.3"
+  artifact:
+    name: "example-server-{{ service.version }}.jar"
+    # 支持 本地路径 ｜ ftp ｜ http ｜ https
+    source: "http://repo.internal.com/{{ service.name }}/{{ service.version }}/{{ service.artifact.name }}"
+
+# 启动参数配置
+params:
+  jvm_opts: "-Xms512m -Xmx512m"
+  main_args: "test=true"
+
+# 路径配置
+paths:
+  base: "/opt/.unifycloud/apps"
+  install: "{{ paths.base }}/{{ service.name }}/{{ service.version }}"
+  symlink: "{{ paths.base }}/{{ service.name }}/current"
+  logs:
+    console: "{{ paths.install }}/logs/console.log"
+
+# 健康检查
+health_check:
+  httpGet:
+    port: 8080
+    path: "/actuator/health"
+    scheme: HTTP
+  initialDelaySeconds: 10            # 初始化时间, 健康检查延迟执行时间
+  timeoutSeconds: 30                 # 超时时间
+  periodSeconds: 5                   # 检测间隔
+  successThreshold: 1                # 检查成功为 1 次表示就绪
+  failureThreshold: 2                # 检测失败 2 次表示未就绪
