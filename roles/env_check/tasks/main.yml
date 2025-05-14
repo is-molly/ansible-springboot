@@ -1,2 +1,5 @@
 # jdk 检查
 - import_tasks: jdk_check.yml
+
+# 系统资源检查
+- import_tasks: system_check.yml

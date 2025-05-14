@@ -1,8 +1,8 @@
 # 环境配置
 env:
   java:
-    version: "1.8"
-    home: "/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.452.b09-2.el9.aarch64"
+    version: "17"
+    home: "/usr/lib/jvm/java-17-openjdk"
 
 # 多实例
 replica:
@@ -17,22 +17,22 @@ service:
   display_name: "示例服务"
   version: "1.2.3"
   artifact:
-    name: "example-server-{{ service.version }}.jar"
+    name: "example-server-v1.0.jar"
     # 支持 本地路径 ｜ ftp ｜ http ｜ https
-    source: "http://repo.internal.com/{{ service.name }}/{{ service.version }}/{{ service.artifact.name }}"
+    source: "http://repo.internal.com/test-service/v1.0/test-service"
 
 # 启动参数配置
 params:
-  jvm_opts: "-Xms512m -Xmx512m"
+  jvm_opts: "-Xms2048m -Xmx2048m"
   main_args: "test=true"
 
 # 路径配置
 paths:
-  base: "/opt/.unifycloud/apps"
-  install: "{{ paths.base }}/{{ service.name }}/{{ service.version }}"
-  symlink: "{{ paths.base }}/{{ service.name }}/current"
+  base: "/opt"    # 用于检测磁盘占用情况
+  install: "/opt/test-service/v1.0"
+  symlink: "/opt/test-service/current"
   logs:
-    console: "{{ paths.install }}/logs/console.log"
+    console: "/opt/test-service/v1.0/logs/console.log"
 
 # 健康检查
 health_check:

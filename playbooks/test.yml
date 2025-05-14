@@ -1,4 +1,8 @@
+# 环境检测
 - hosts: localhost
   connection: local
   roles:
-  - env_check
+  - role: env_check
+    tags: 
+      - install
+      - update

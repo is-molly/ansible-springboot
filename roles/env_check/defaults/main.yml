@@ -2,3 +2,9 @@ env:
   java:
     version: 1.8.0
     home: "/usr/lib/jvm/java-1.8.0-openjdk"
+
+params:
+  jvm_opts: "-Xms512m -Xmx512m"
+
+paths:
+  base: "/"
