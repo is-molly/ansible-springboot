@@ -1,6 +1,5 @@
 # 环境检测
-- hosts: localhost
-  connection: local
+- hosts: springboot
   roles:
   - role: env_check
     tags: 
