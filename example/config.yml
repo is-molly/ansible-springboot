@@ -1,8 +1,8 @@
 # 环境配置
 env:
   java:
-    version: "17"
-    home: "/usr/lib/jvm/java-17-openjdk"
+    version: "1.8"
+    home: "/usr/lib/jvm/java-1.8.0-openjdk"
 
 # 多实例
 replica:

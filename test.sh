@@ -1,3 +1,3 @@
 #!/bin/bash
 
-curl -s http://192.168.101.81:8401/test
+curl -s http://local.heluox.com:8401/test
