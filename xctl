@@ -8,7 +8,7 @@ SCRIPT_NAME=$(basename "$0")
 CONFIG_FILE=""
 INVENTORY_FILE=""
 
-cd ${SCRIPT_DIR} || exit 1
+cd "${SCRIPT_DIR}" || exit 1
 
 function usage() {
     echo -e "\033[33mUsage:\033[0m unictl COMMAND [args]"
@@ -16,9 +16,11 @@ function usage() {
 -------------------------------------------------------------------------------------
 Ansible SpringBoot OPS:
     install     <config file>          to install same springboot application
+    update      <config file>          to update same springboot application
     start       <config file>          to start same springboot application
     stop        <config file>          to stop same springboot application
     restart     <config file>          to restart same springboot application
+    statusCheck <config file>          springboot application status check
     uninstall   <config file>          to uninstall same springboot application
 EOF
 }
@@ -44,8 +46,8 @@ function logger() {
     esac
 }
 
-function install() {
-    ansible-playbook -e "@$CONFIG_FILE" -i "$INVENTORY_FILE" $SCRIPT_DIR/playbooks/test.yml
+function action() {
+    ansible-playbook -e "@$CONFIG_FILE" -i "$INVENTORY_FILE" $SCRIPT_DIR/playbooks/action.yml --tags "$1"
 }
 
 ### Main Lines ##################################################
@@ -66,13 +68,13 @@ function main() {
   [ ! -e $INVENTORY_FILE ] && { logger error "inventory file [ $INVENTORY_FILE ] not exist"; exit 1; }
 
   case "$1" in
-      (install)
-          install
-          ;;
-      (*)
-          usage
-          exit 1
-          ;;
+    (install|update|start|stop|restart|statusCheck|uninstall)
+      action "$1"
+      ;;
+    (*)
+      usage
+      exit 1
+      ;;
   esac
 }
 

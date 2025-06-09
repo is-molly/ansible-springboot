@@ -13,6 +13,9 @@ service:
   name: "example-server"
   displayName: "示例服务"
   version: "v1.0"
+  port:
+    - 8080
+    - 18080
   param:
     jvmOpts: "-Xms2048m -Xmx2048m"
     mainArgs: "test=true"
