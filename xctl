@@ -7,21 +7,27 @@ SCRIPT_DIR=$(dirname "$0")
 SCRIPT_NAME=$(basename "$0")
 CONFIG_FILE=""
 INVENTORY_FILE=""
+ACTION=""
 
 cd "${SCRIPT_DIR}" || exit 1
 
 function usage() {
-    echo -e "\033[33mUsage:\033[0m unictl COMMAND [args]"
+    echo -e "\033[33mUsage:\033[0m $SCRIPT_NAME ACTION -i INVENTORY_FILE -c CONFIG_FILE"
     cat <<EOF
 -------------------------------------------------------------------------------------
 Ansible SpringBoot OPS:
-    install     <config file>          to install same springboot application
-    update      <config file>          to update same springboot application
-    start       <config file>          to start same springboot application
-    stop        <config file>          to stop same springboot application
-    restart     <config file>          to restart same springboot application
-    statusCheck <config file>          springboot application status check
-    uninstall   <config file>          to uninstall same springboot application
+    ACTION must be one of:
+        install       to install same springboot application
+        update        to update same springboot application
+        start        to start same springboot application
+        stop         to stop same springboot application
+        restart      to restart same springboot application
+        statusCheck  springboot application status check
+        uninstall    to uninstall same springboot application
+
+    Options:
+        -i INVENTORY_FILE  specify ansible inventory file (required)
+        -c CONFIG_FILE     specify config file (required)
 EOF
 }
 
@@ -58,20 +64,54 @@ function main() {
   # check 'ansible-playbook' executable
   which ansible > /dev/null 2>&1 || { logger error "need 'ansible', try: 'pip install ansible'"; usage; exit 1; }
 
-  # check config file
-  [ "$#" -eq 2 ] || { usage >&2; exit 1; }
-  CONFIG_FILE=$2
-  [ ! -e $CONFIG_FILE ] && { logger error "config file [ $CONFIG_FILE ] not exist"; exit 1; }
+  # First argument must be the action
+  if [[ $# -eq 0 ]]; then
+    usage
+    exit 1
+  fi
 
-  # check inventory file
-  INVENTORY_FILE=$(awk '/inventory:/ {gsub(/["'\'']/, "", $NF); print $NF}' $CONFIG_FILE)
-  [ ! -e $INVENTORY_FILE ] && { logger error "inventory file [ $INVENTORY_FILE ] not exist"; exit 1; }
+  ACTION=$1
+  shift  # Remove action from arguments list
 
-  case "$1" in
+  # Parse remaining options
+  while getopts ":i:c:" opt; do
+    case $opt in
+      i)
+        INVENTORY_FILE=$OPTARG
+        ;;
+      c)
+        CONFIG_FILE=$OPTARG
+        ;;
+      \?)
+        logger error "Invalid option: -$OPTARG"
+        usage
+        exit 1
+        ;;
+      :)
+        logger error "Option -$OPTARG requires an argument."
+        usage
+        exit 1
+        ;;
+    esac
+  done
+
+  # Check required arguments
+  if [[ -z "$INVENTORY_FILE" || -z "$CONFIG_FILE" ]]; then
+    logger error "Missing required arguments"
+    usage
+    exit 1
+  fi
+
+  # Check files exist
+  [ ! -e "$CONFIG_FILE" ] && { logger error "config file [ $CONFIG_FILE ] not exist"; exit 1; }
+  [ ! -e "$INVENTORY_FILE" ] && { logger error "inventory file [ $INVENTORY_FILE ] not exist"; exit 1; }
+
+  case "$ACTION" in
     (install|update|start|stop|restart|statusCheck|uninstall)
-      action "$1"
+      action "$ACTION"
       ;;
     (*)
+      logger error "Invalid action: $ACTION"
       usage
       exit 1
       ;;
