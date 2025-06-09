@@ -1,20 +1,19 @@
+# 多实例
+replica:
+  # 清单文件路径（可以是静态清单文件，也可以是动态清单程序）
+  # eg: /root/ansible-springboot/example/static_hosts  | /root/ansible-springboot/example/dynamic_inventory.sh
+  inventory: "/root/ansible-springboot/example/static_hosts"
+
 # 环境配置
 env:
   java:
     version: "1.8"
     home: "/usr/lib/jvm/java-1.8.0-openjdk"
 
-# 多实例
-replica:
-  # 如果不写则默认获取项目下的静态清单
-  dync:
-    # 动态清单获取url
-    url: "http://localhost:9999/cloud_inventory?id={{service.name}}"
-
 # 服务元数据
 service:
   name: "example-server"
-  display_name: "示例服务"
+  displayName: "示例服务"
   version: "1.2.3"
   artifact:
     name: "example-server-v1.0.jar"
@@ -23,8 +22,8 @@ service:
 
 # 启动参数配置
 params:
-  jvm_opts: "-Xms2048m -Xmx2048m"
-  main_args: "test=true"
+  jvmOpts: "-Xms2048m -Xmx2048m"
+  mainArgs: "test=true"
 
 # 路径配置
 paths:
@@ -35,7 +34,7 @@ paths:
     console: "/opt/test-service/v1.0/logs/console.log"
 
 # 健康检查
-health_check:
+healthCheck:
   httpGet:
     port: 8080
     path: "/actuator/health"

@@ -3,8 +3,8 @@
   block:
     - name: 解析 JVM 最大堆内存 (-Xmx)
       set_fact:
-        xmx_value: "{{ params.jvm_opts | regex_search(xmx_regex, '\\1') | first | default('0') }}"
-        xmx_unit: "{{ params.jvm_opts | regex_search(xmx_regex, '\\2') | first | default('') | lower }}"
+        xmx_value: "{{ params.jvmOpts | regex_search(xmx_regex, '\\1') | first | default('0') }}"
+        xmx_unit: "{{ params.jvmOpts | regex_search(xmx_regex, '\\2') | first | default('') | lower }}"
       vars:
         xmx_regex: ".*-Xmx(\\d+(?:\\.\\d+)?)([kKmMgG]?)\\b.*"
 
@@ -14,7 +14,7 @@
           - xmx_value is defined
           - xmx_value | float > 0
           - xmx_unit is defined and xmx_unit in ['', 'k', 'm', 'g']
-        fail_msg: "无法从 jvm_opts 中提取有效的 -Xmx 参数，请确认格式类似 -Xmx512m、-Xmx2g 或 -Xmx102400"
+        fail_msg: "无法从 jvmOpts 中提取有效的 -Xmx 参数，请确认格式类似 -Xmx512m、-Xmx2g 或 -Xmx102400"
 
     - name: 将 -Xmx 单位统一转换为 MB
       set_fact:

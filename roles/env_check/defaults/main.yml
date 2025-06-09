@@ -4,7 +4,7 @@ env:
     home: "/usr/lib/jvm/java-1.8.0-openjdk"
 
 params:
-  jvm_opts: "-Xms512m -Xmx512m"
+  jvmOpts: "-Xms512m -Xmx512m"
 
 paths:
   base: "/"

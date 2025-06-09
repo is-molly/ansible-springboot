@@ -1,5 +1,5 @@
 # 环境检测
-- hosts: springboot
+- hosts: all
   roles:
   - role: env_check
     tags: 
