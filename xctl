@@ -62,7 +62,7 @@ function main() {
   [ ! -e $CONFIG_FILE ] && { logger error "config file [ $CONFIG_FILE ] not exist"; exit 1; }
 
   # check inventory file
-  INVENTORY_FILE=$(awk '/  inventory:/ {gsub(/["'\'']/, "", $NF); print $NF}' $CONFIG_FILE)
+  INVENTORY_FILE=$(awk '/inventory:/ {gsub(/["'\'']/, "", $NF); print $NF}' $CONFIG_FILE)
   [ ! -e $INVENTORY_FILE ] && { logger error "inventory file [ $INVENTORY_FILE ] not exist"; exit 1; }
 
   case "$1" in

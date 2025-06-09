@@ -3,8 +3,8 @@ env:
     version: 1.8.0
     home: "/usr/lib/jvm/java-1.8.0-openjdk"
 
-params:
-  jvmOpts: "-Xms512m -Xmx512m"
-
-paths:
-  base: "/"
+serevice:
+  param:
+    jvmOpts: "-Xms512m -Xmx512m"
+  path:
+    installDir: "/opt/"

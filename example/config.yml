@@ -1,8 +1,6 @@
-# 多实例
-replica:
-  # 清单文件路径（可以是静态清单文件，也可以是动态清单程序）
-  # eg: /root/ansible-springboot/example/static_hosts  | /root/ansible-springboot/example/dynamic_inventory.sh
-  inventory: "/root/ansible-springboot/example/static_hosts"
+# 清单文件路径（可以是静态清单文件，也可以是动态清单程序）
+# eg: /root/ansible-springboot/example/static_hosts  | /root/ansible-springboot/example/dynamic_inventory.sh
+inventory: "/root/ansible-springboot/example/static_hosts"
 
 # 环境配置
 env:
@@ -14,33 +12,21 @@ env:
 service:
   name: "example-server"
   displayName: "示例服务"
-  version: "1.2.3"
-  artifact:
-    name: "example-server-v1.0.jar"
-    # 支持 本地路径 ｜ ftp ｜ http ｜ https
-    source: "http://repo.internal.com/test-service/v1.0/test-service"
-
-# 启动参数配置
-params:
-  jvmOpts: "-Xms2048m -Xmx2048m"
-  mainArgs: "test=true"
-
-# 路径配置
-paths:
-  base: "/opt"    # 用于检测磁盘占用情况
-  install: "/opt/test-service/v1.0"
-  symlink: "/opt/test-service/current"
-  logs:
-    console: "/opt/test-service/v1.0/logs/console.log"
-
-# 健康检查
-healthCheck:
-  httpGet:
-    port: 8080
-    path: "/actuator/health"
-    scheme: HTTP
-  initialDelaySeconds: 10            # 初始化时间, 健康检查延迟执行时间
-  timeoutSeconds: 30                 # 超时时间
-  periodSeconds: 5                   # 检测间隔
-  successThreshold: 1                # 检查成功为 1 次表示就绪
-  failureThreshold: 2                # 检测失败 2 次表示未就绪
+  version: "v1.0"
+  param:
+    jvmOpts: "-Xms2048m -Xmx2048m"
+    mainArgs: "test=true"
+  path:
+    artifactFile: "/opt/data/example-server.jar"
+    installDir: "/opt/"
+    logDir: "/opt/logs/"
+  healthCheck:
+    httpGet:
+      port: 8080
+      path: "/actuator/health"
+      scheme: HTTP
+    initialDelaySeconds: 10            # 初始化时间, 健康检查延迟执行时间
+    timeoutSeconds: 30                 # 超时时间
+    periodSeconds: 5                   # 检测间隔
+    successThreshold: 1                # 检查成功为 1 次表示就绪
+    failureThreshold: 2                # 检测失败 2 次表示未就绪
