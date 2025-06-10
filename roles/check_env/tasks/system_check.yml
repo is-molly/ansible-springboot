@@ -37,18 +37,18 @@
   block:
     - name: 获取安装目录路径
       stat:
-        path: "{{ service.path.installDir }}"
+        path: "{{ service.path.installDir | trim | default(env.basePath + service.name + '/', true) }}"
       register: path_stat
 
     - name: 验证安装目录是否存在
       assert:
         that:
           - path_stat.stat.exists
-        fail_msg: "安装目录 {{ service.path.installDir }} 不存在，请先创建或指定有效路径"
+        fail_msg: "安装目录 {{ service.path.installDir | trim | default(env.basePath + service.name + '/', true) }} 不存在，请先创建或指定有效路径"
 
     - name: 获取磁盘信息
       shell: |
-        df -kP "{{ service.path.installDir }}" | awk 'NR==2 {print $2 " " $4 " " $6}'
+        df -kP "{{ service.path.installDir | trim | default(env.basePath + service.name + '/', true) }}" | awk 'NR==2 {print $2 " " $4 " " $6}'
       register: df_output
       changed_when: false
       args:
@@ -68,7 +68,7 @@
           - actual_mount_point is defined
         fail_msg: |
           无法获取有效的磁盘信息！
-          检查路径: {{ service.path.installDir }}
+          检查路径: {{ service.path.installDir | trim | default(env.basePath + service.name + '/', true) }}
           DF命令输出: {{ df_output.stdout | default('无输出') }}
           实际挂载点: {{ actual_mount_point | default('未知') }}
 
@@ -78,7 +78,7 @@
           - (fs_avail_kb | int > (fs_total_kb | int * 0.05)) or (fs_avail_kb | int > (min_free_gb | float * 1024 * 1024))
         fail_msg: |
           磁盘空间不足！
-          路径: {{ service.path.installDir }}
+          路径: {{ service.path.installDir | trim | default(env.basePath + service.name + '/', true) }}
           挂载点: {{ actual_mount_point }}
           总空间: {{ (fs_total_kb | int / 1024 / 1024) | round(2) }} GB
           可用空间: {{ (fs_avail_kb | int / 1024 / 1024) | round(2) }} GB

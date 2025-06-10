@@ -1,0 +1,28 @@
+---
+- name: 检查必需参数不为空
+  assert:
+    that:
+      - env is defined and env
+      - env.basePath is defined and env.basePath | length > 0
+      - env.java is defined and env.java
+      - env.java.version is defined and env.java.version | length > 0
+      - env.java.home is defined and env.java.home | length > 0
+      - service is defined and service
+      - service.name is defined and service.name | length > 0
+      - service.displayName is defined and service.displayName | length > 0
+      - service.version is defined and service.version | length > 0
+      - service.port is defined and service.port | length > 0
+      - service.param is defined and service.param
+      - service.param.jvmOpts is defined and service.param.jvmOpts | length > 0
+      - service.path is defined and service.path
+      - service.path.artifactFile is defined and service.path.artifactFile | length > 0
+    msg: "必需参数不能为空"
+
+- name: 检查端口参数有效性
+  assert:
+    that:
+      - item is number
+      - item >= 1
+      - item <= 65535
+    msg: "端口号必须为1-65535之间的数字"
+  loop: "{{ service.port }}"

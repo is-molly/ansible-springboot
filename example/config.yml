@@ -1,5 +1,6 @@
 # 环境配置
 env:
+  basePath: /opt/.heluox/
   java:
     version: "1.8"
     home: "/usr/lib/jvm/java-1.8.0-openjdk"
@@ -14,11 +15,11 @@ service:
     - 18080
   param:
     jvmOpts: "-Xms2048m -Xmx2048m"
-    mainArgs: "test=true"
+    mainArgs: ""
   path:
     artifactFile: "/opt/data/example-server.jar"
-    installDir: "/opt/"
-    logDir: "/opt/logs/"
+    installDir: ""
+    logDir: ""
   healthCheck:
     httpGet:
       port: 8080
