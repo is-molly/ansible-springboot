@@ -1,0 +1,20 @@
+---
+- name: 设置默认安装与日志路径
+  set_fact:
+    service_path_installDir: "{{ service.path.installDir | trim | default(env.basePath + '/' + service.name + '/', true) }}"
+    service_path_logDir: "{{ service.path.logDir | trim | default(env.basePath + '/' + service.name + '/logs/', true) }}"
+    
+- name: Remove systemd service file
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ service.name }}.service"
+    state: absent
+  notify: reload systemd
+
+- name: Remove application files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ service_path_logDir }}"
+    - "{{ service_path_installDir }}"
+  when: item != ""

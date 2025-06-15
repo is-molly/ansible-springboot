@@ -4,7 +4,7 @@
   - role: check_param
   - role: check_env
   - role: build
-    # - role: start
+  - role: start
   tags: 
     - install
 
@@ -20,46 +20,46 @@
 #   tags: 
 #     - update
 
-# # 启动
-# - hosts: all
-#   roles:
-#     - role: check_param
-#     - role: start
-#   tags: 
-#     - start
+# 启动
+- hosts: all
+  roles:
+    - role: check_param
+    - role: start
+  tags: 
+    - start
 
-# # 停止
-# - hosts: all
-#   roles:
-#     - role: check_param
-#     - role: stop
-#   tags: 
-#     - stop
+# 停止
+- hosts: all
+  roles:
+    - role: check_param
+    - role: stop
+  tags: 
+    - stop
 
-# # 重启
-# - hosts: all
-#   serial: 1  # 滚动重启
-#   roles:
-#     - role: check_param
-#     - role: stop
-#     - role: start
-#   tags: 
-#     - restart
+# 重启
+- hosts: all
+  serial: 1  # 滚动重启
+  roles:
+    - role: check_param
+    - role: stop
+    - role: start
+  tags: 
+    - restart
 
-# # 状态检查
-# - hosts: all
-#   roles:
-#     - role: check_param
-#     - role: check_status
-#   tags: 
-#     - statusCheck
+# 状态检查
+- hosts: all
+  roles:
+    - role: check_param
+    - role: check_status
+  tags: 
+    - statusCheck
 
-# # 卸载
-# - hosts: all
-#   roles:
-#     - role: check_param
-#     - role: stop
-#     - role: cleanup
-#   tags: 
-#     - uninstall
+# 卸载
+- hosts: all
+  roles:
+    - role: check_param
+    - role: stop
+    - role: cleanup
+  tags: 
+    - uninstall
 

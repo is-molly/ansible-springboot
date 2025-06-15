@@ -1,0 +1,14 @@
+---
+- name: Ensure service is stopped
+  ansible.builtin.systemd:
+    name: "{{ service.name }}"
+    state: stopped
+    daemon_reload: yes
+  register: stop_result
+
+- name: Wait for service to fully stop
+  ansible.builtin.wait_for:
+    path: "/run/systemd/system/{{ service.name }}.service"
+    state: absent
+    timeout: "{{ service.healthCheck.timeoutSeconds | default(30) }}"
+  when: stop_result.changed

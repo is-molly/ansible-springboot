@@ -1,0 +1,23 @@
+[Unit]
+Description={{ service.displayName }}
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory={{ service_path_installDir }}
+ExecStart={{ effective_java_home }}/bin/java {{ service.param.jvmOpts }} -jar {{ service.name }}.jar {{ service.param.mainArgs }}
+# 日志重定向
+StandardOutput=append:{{ service_path_logDir }}/console.log
+StandardError=append:{{ service_path_logDir }}/console.log
+# 优雅停机
+TimeoutStopSec=30
+KillSignal=SIGTERM
+KillMode=mixed
+SuccessExitStatus=143
+# 重启策略
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

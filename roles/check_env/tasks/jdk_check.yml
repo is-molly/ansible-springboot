@@ -1,79 +1,69 @@
 ---
-- name: 验证JDK安装目录
+- name: 设置候选Java路径列表
+  set_fact:
+    candidate_java_homes: |
+      {{
+        ( [env.java.home] if env.java.home is defined else [] ) +
+        ( [ansible_facts.env.JAVA_HOME] if ansible_facts.env.JAVA_HOME is defined else [] ) +
+        [
+          '/usr/lib/jvm/java-' + env.java.version + '-openjdk',
+          '/usr/lib/jvm/jdk-' + env.java.version,
+          '/usr/java/jdk' + env.java.version,
+          '/usr/local/java/jdk' + env.java.version,
+          '/opt/java/jdk' + env.java.version
+        ]
+      }}
+
+- name: 检查候选路径是否存在
+  stat:
+    path: "{{ item }}/bin/java"
+  register: java_path_checks
+  loop: "{{ candidate_java_homes }}"
+  ignore_errors: yes
+
+- name: 提取有效的候选路径
+  set_fact:
+    valid_java_homes: "{{ java_path_checks.results | selectattr('stat.exists') | map(attribute='item') | list }}"
+
+- name: 验证Java安装
   block:
-    - name: 检查JDK安装目录是否存在
-      stat:
-        path: "{{ env.java.home }}"
-        follow: yes
-      register: java_home_stat
-
-    - name: 断言JDK安装目录有效性
-      assert:
-        that:
-          - java_home_stat.stat.exists
-          - java_home_stat.stat.isdir
-        fail_msg: "JDK安装目录无效: {{ env.java.home }} (必须存在且是目录)"
-        success_msg: "JDK安装目录验证通过: {{ env.java.home }}"
-
-- name: 验证Java可执行文件
-  block:
-    - name: 检查Java可执行文件是否存在
-      stat:
-        path: "{{ env.java.home }}/bin/java"
-      register: java_exec_stat
-
-    - name: 断言Java可执行文件为常规文件
-      assert:
-        that:
-          - java_exec_stat.stat.exists
-          - java_exec_stat.stat.isreg
-        fail_msg: "Java可执行文件不存在或不是常规文件: {{ env.java.home }}/bin/java"
-
-    - name: 获取Java原始版本信息
-      command: "{{ env.java.home }}/bin/java -version"
-      register: java_version_result
-      ignore_errors: yes
+    - name: 测试候选Java版本
+      command: "{{ item }}/bin/java -version"
+      register: java_test
       changed_when: false
-
-    - name: 格式化Java原始版本信息
+      ignore_errors: yes
+      loop: "{{ valid_java_homes }}"
+    
+    - name: 提取匹配版本的有效路径
       set_fact:
-        java_raw_output: >-
-          {{
-            ((java_version_result.stderr | default('')).split('\n') | first)
-            | regex_search('\"(.*?)\"')
-            | regex_replace('\"', '')
-          }}
-
-    - name: 检查原始版本
-      debug:
-        msg: "{{java_raw_output}}"
-
-    - name: 断言Java执行文件可以正常执行
-      assert:
-        that:
-          - not java_version_result.failed
-        fail_msg: |
-          Java无法执行: {{ env.java.home }}/bin/java
-          错误信息: "{{ java_version_result.msg }}"
-          原始输出: "{{ java_raw_output }}"
-          可能原因:
-          1. 缺少执行权限
-          2. 文件损坏
-          3. 不是有效的可执行文件
-        success_msg: "Java可执行性验证通过"
-
-- name: 检查Java版本
-  block:
-    - name: 断言Java版本匹配
-      assert:
-        that:
-          - "java_raw_output.startswith(env.java.version ~ '.') or java_raw_output == env.java.version"
-        fail_msg: |
-          Java版本不匹配！
-          要求版本: {{ env.java.version }}
-          实际输出: {{ java_raw_output }}
-          可能原因:
-          1. JAVA_HOME路径错误: {{ env.java.home }}
-          2. 未安装JDK {{ env.java.version }}
-        success_msg: "Java版本验证通过, 要求版本: {{ env.java.version }}，实际版本: {{ java_raw_output }}"
-  when: env.java.version is defined
+        effective_java_home: "{{ item.item }}"
+        java_version: >-
+          {% set version_lines = item.stderr.split('\n') | default([]) %}
+          {% for line in version_lines %}
+            {% if 'version' in line %}
+              {{ line.split('"')[1] | default('unknown') }}
+            {% endif %}
+          {% endfor %}
+      when: 
+        - not item.failed
+        - item.stderr is defined
+        - (' version "' + env.java.version + '.') in item.stderr
+      loop: "{{ java_test.results }}"
+  
+- name: 验证Java安装结果
+  assert:
+    that:
+      - effective_java_home is defined
+      - java_version != 'unknown'
+    fail_msg: |
+      未找到有效的Java {{ env.java.version }} 安装！
+      已检查路径:
+      {% for path in candidate_java_homes %}
+        - {{ path }}
+      {% endfor %}
+      有效路径:
+      {% for path in valid_java_homes %}
+        - {{ path }}
+      {% endfor %}
+      请确保已安装正确版本的JDK
+    success_msg: "Java验证通过: {{ effective_java_home }} (版本: {{ java_version }})"

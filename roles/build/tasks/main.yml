@@ -1,0 +1,75 @@
+---
+- name: 设置默认安装与日志路径
+  set_fact:
+    service_path_installDir: "{{ service.path.installDir | default(env.basePath + '/' + service.name, true) | trim }}"
+    service_path_logDir: "{{ service.path.logDir | default(env.basePath + '/' + service.name + '/logs', true) | trim }}"
+
+# 在控制节点上检查源文件是否存在
+- name: 验证控制节点上的JAR文件存在
+  stat:
+    path: "{{ service.path.artifactFile }}"
+  register: local_jar_stat
+  delegate_to: localhost
+  run_once: true
+
+- name: 如果源文件不存在则报错
+  fail:
+    msg: "控制节点上的JAR文件不存在: {{ service.path.artifactFile }}"
+  when: not local_jar_stat.stat.exists
+  delegate_to: localhost
+  run_once: true
+
+- name: 获取安装目录状态
+  stat:
+    path: "{{ service_path_installDir }}"
+  register: install_dir_stat
+
+- name: 验证安装目录是否已存在
+  fail:
+    msg: "安装目录 {{ service_path_installDir }} 已存在且不为空，请清理或选择其他目录"
+  when: 
+    - install_dir_stat.stat.exists
+    - install_dir_stat.stat.isdir
+    - install_dir_stat.stat.size > 0
+
+- name: 创建安装目录
+  file:
+    path: "{{ service_path_installDir }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  when: not install_dir_stat.stat.exists
+
+- name: 创建日志目录
+  file:
+    path: "{{ service_path_logDir }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+# 直接从控制节点复制JAR文件到目标机器
+- name: 复制应用JAR文件
+  copy:
+    src: "{{ service.path.artifactFile }}"
+    dest: "{{ service_path_installDir }}/{{ service.name }}.jar"
+    owner: root
+    group: root
+    mode: '0644'
+    remote_src: no
+
+# 生成systemd服务文件
+- name: 生成 systemd 服务文件
+  template:
+    src: springboot.service.j2
+    dest: /etc/systemd/system/{{ service.name }}.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd
+
+- name: 设置服务开机自启
+  systemd:
+    name: "{{ service.name }}"
+    enabled: yes

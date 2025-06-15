@@ -1,14 +1,14 @@
 # 环境配置
 env:
-  basePath: /opt/.heluox/
+  basePath: /opt/.heluox
   java:
-    version: "1.8"
-    home: "/usr/lib/jvm/java-1.8.0-openjdk"
+    version: "17"
+    home: "/usr/lib/jvm/java-17-openjdk-17.0.15.0.6-2.el9.aarch64"
 
 # 服务元数据
 service:
-  name: "example-server"
-  displayName: "示例服务"
+  name: "heluox-agent"
+  displayName: "heluox主机代理服务"
   version: "v1.0"
   port:
     - 8080
@@ -17,15 +17,14 @@ service:
     jvmOpts: "-Xms2048m -Xmx2048m"
     mainArgs: ""
   path:
-    artifactFile: "/opt/data/example-server.jar"
+    artifactFile: "/opt/.heluox/repository/java/heluox-agent/v1/heluox-agent.jar"
     installDir: ""
     logDir: ""
   healthCheck:
     httpGet:
-      port: 8080
-      path: "/actuator/health"
+      port: 8401
+      path: "/test"
       scheme: HTTP
-    initialDelaySeconds: 10            # 初始化时间, 健康检查延迟执行时间
     timeoutSeconds: 30                 # 超时时间
     periodSeconds: 5                   # 检测间隔
     successThreshold: 1                # 检查成功为 1 次表示就绪

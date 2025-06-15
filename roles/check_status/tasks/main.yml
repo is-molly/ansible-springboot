@@ -1,0 +1,73 @@
+---
+- name: Check service systemd status
+  ansible.builtin.systemd:
+    name: "{{ service.name }}"
+  register: service_status
+
+- name: Extract service state
+  ansible.builtin.set_fact:
+    service_state: "{{ service_status.status.ActiveState }}"
+
+# 检查是否需要健康检查
+- name: Check if health check is required
+  ansible.builtin.set_fact:
+    health_check_required: "{{
+      service_state == 'active' and
+      service.healthCheck is defined and
+      service.healthCheck.httpGet is defined and
+      service.healthCheck.httpGet.port is defined and
+      service.healthCheck.httpGet.path is defined
+    }}"
+
+# 构建健康检查URL（如果需要）
+- name: Build health check URL
+  ansible.builtin.set_fact:
+    health_check_url: "{{ service.healthCheck.httpGet.scheme | default('http') }}://{{ ansible_host }}:{{ service.healthCheck.httpGet.port }}{{ service.healthCheck.httpGet.path }}"
+  when: health_check_required | bool
+
+# 执行健康检查（如果需要）
+- name: Perform health check
+  ansible.builtin.uri:
+    url: "{{ health_check_url }}"
+    method: GET
+    return_content: yes
+    status_code: 200
+    timeout: "{{ service.healthCheck.timeoutSeconds | default(30) }}"
+    body_format: json
+  register: health_result
+  ignore_errors: yes
+  when: health_check_required | bool
+
+# 设置健康状态码和消息
+- name: Set health status code and message
+  ansible.builtin.set_fact:
+    health_code: >
+      {% if service_state != 'active' %}3
+      {% elif not health_check_required | bool %}1
+      {% elif health_result.status == 200 %}0
+      {% else %}2
+      {% endif %}
+    health_message: >
+      {% if service_state != 'active' %}Service not running
+      {% elif not health_check_required | bool %}Running (no health check configured)
+      {% elif health_result.status == 200 %}Healthy
+      {% else %}Unhealthy: {{ health_result.msg | default('Health check failed') }}
+      {% endif %}
+
+# 输出JSON格式的状态
+- name: Output JSON status
+  ansible.builtin.debug:
+    msg: >
+      {
+        "service": "{{ service.name }}",
+        "systemd_status": "{{ service_state }}",
+        "health_code": {{ health_code }},
+        "health_message": "{{ health_message | replace('"', '\\"') }}",
+        {% if health_check_url is defined %}
+        "health_check_url": "{{ health_check_url }}",
+        {% endif %}
+        "health_check_result": {
+          "status_code": {{ health_result.status | default(-1) }},
+          "response": {{ health_result.content | default('') | to_json }}
+        }
+      }

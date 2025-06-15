@@ -1,0 +1,52 @@
+---
+- name: Ensure service is started
+  ansible.builtin.systemd:
+    name: "{{ service.name }}"
+    state: started
+    daemon_reload: yes
+    enabled: yes
+  register: start_result
+
+# 只在服务状态改变时执行健康检查
+- name: Check if health check is required
+  ansible.builtin.set_fact:
+    health_check_required: "{{
+      start_result.changed and
+      service.healthCheck is defined and
+      service.healthCheck.httpGet is defined and
+      service.healthCheck.httpGet.port is defined and
+      service.healthCheck.httpGet.path is defined
+    }}"
+
+- name: Build health check URL if required
+  ansible.builtin.set_fact:
+    health_check_url: "{{ service.healthCheck.httpGet.scheme | default('http') }}://{{ ansible_host }}:{{ service.healthCheck.httpGet.port }}{{ service.healthCheck.httpGet.path }}"
+  when: health_check_required | bool
+
+- name: Wait for service to become healthy
+  block:
+    - name: Calculate health check parameters
+      ansible.builtin.set_fact:
+        total_retries: "{{ (service.healthCheck.timeoutSeconds | default(30) / service.healthCheck.periodSeconds | default(5)) | int }}"
+        delay_seconds: "{{ service.healthCheck.periodSeconds | default(5) }}"
+        success_threshold: "{{ service.healthCheck.successThreshold | default(1) }}"
+
+    - name: Perform health check (retry until success)
+      ansible.builtin.uri:
+        url: "{{ health_check_url }}"
+        method: GET
+        status_code: 200
+        timeout: "{{ service.healthCheck.timeoutSeconds | default(30) }}"
+        body_format: json
+      register: health_result
+      until: health_result.status == 200
+      retries: "{{ total_retries }}"
+      delay: "{{ delay_seconds }}"
+      ignore_errors: yes
+      
+    - name: Fail if health check not passed
+      ansible.builtin.fail:
+        msg: "Service health check failed after {{ total_retries }} attempts. Last status: {{ health_result.status }}"
+      when: health_result.status != 200
+      
+  when: health_check_required | bool
