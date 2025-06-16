@@ -55,7 +55,7 @@
       {% endif %}
 
 # 输出JSON格式的状态
-- name: Output JSON status
+- name: Output to program
   ansible.builtin.debug:
     msg: >
       {
