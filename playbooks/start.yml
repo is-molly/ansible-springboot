@@ -1,4 +1,14 @@
 - hosts: all
-  roles:
-    - role: check_param
-    - role: start
+  tasks:
+    - name: param check
+      include_role:
+        name: check_param
+
+    - name: system check
+      include_role:
+        name: check_env
+        tasks_from: system_check.yml
+
+    - name: start
+      include_role:
+        name: start

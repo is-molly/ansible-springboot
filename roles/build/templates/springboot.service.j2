@@ -6,7 +6,7 @@ After=network.target
 User=root
 Group=root
 WorkingDirectory={{ service_path_installDir }}
-ExecStart={{ effective_java_home }}/bin/java {{ service.param.jvmOpts }} -jar {{ service.name }}.jar {{ service.param.mainArgs }}
+ExecStart={{ effective_java_home }}/bin/java {{ service.param.jvmOpts }} -jar {{ service.path.artifactFile | basename }} {{ service.param.mainArgs }}
 # 日志重定向
 StandardOutput=append:{{ service_path_logDir }}/console.log
 StandardError=append:{{ service_path_logDir }}/console.log

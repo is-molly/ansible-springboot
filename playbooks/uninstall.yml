@@ -2,4 +2,6 @@
   roles:
     - role: check_param
     - role: stop
+      ignore_errors: yes
     - role: cleanup
+      ignore_errors: yes

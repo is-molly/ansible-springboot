@@ -53,7 +53,7 @@
 - name: 复制应用JAR文件
   copy:
     src: "{{ service.path.artifactFile }}"
-    dest: "{{ service_path_installDir }}/{{ service.name }}.jar"
+    dest: "{{ service_path_installDir }}/"
     owner: root
     group: root
     mode: '0644'

@@ -1,4 +1,9 @@
 - hosts: all
-  roles:
-    - role: check_param
-    - role: stop
+  tasks:
+    - name: param check
+      include_role:
+        name: check_param
+
+    - name: stop
+      include_role:
+        name: stop

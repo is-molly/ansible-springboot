@@ -1,4 +1,4 @@
-# 滚动重启
+# 滚动更新
 - hosts: all
   serial: 1
   tasks:
@@ -10,11 +10,18 @@
       include_role:
         name: stop
       ignore_errors: yes
-      
+
+    - name: cleanup
+      include_role:
+        name: cleanup
+
     - name: env check
       include_role:
         name: check_env
-        tasks_from: system_check.yml
+
+    - name: build
+      include_role:
+        name: build
 
     - name: start
       include_role:

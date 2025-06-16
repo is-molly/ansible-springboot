@@ -17,7 +17,7 @@ service:
     jvmOpts: "-Xms2048m -Xmx2048m"
     mainArgs: ""
   path:
-    artifactFile: "/opt/.heluox/repository/java/heluox-agent/v1/heluox-agent.jar"
+    artifactFile: "/opt/.heluox/repository/java/heluox-agent/v2/heluox-agent-2.0.0.jar"
     installDir: ""
     logDir: ""
   healthCheck:
