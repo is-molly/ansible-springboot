@@ -1,3 +1,11 @@
+# debian系列特殊配置
+- import_tasks: debian.yml
+  when: 'ansible_distribution_file_variety in ["Debian"]'
+
+# redhat系列特殊配置
+- import_tasks: redhat.yml
+  when: ansible_distribution_file_variety in ["RedHat"] or ansible_distribution in ["CentOS"]
+
 # jdk 检查
 - import_tasks: jdk_check.yml
 
