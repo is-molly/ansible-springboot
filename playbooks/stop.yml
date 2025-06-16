@@ -1,0 +1,4 @@
+- hosts: all
+  roles:
+    - role: check_param
+    - role: stop

@@ -53,7 +53,7 @@ function logger() {
 }
 
 function action() {
-    ansible-playbook -e "@$CONFIG_FILE" -i "$INVENTORY_FILE" $SCRIPT_DIR/playbooks/action.yml --tags "$1"
+    ansible-playbook -e "@$CONFIG_FILE" -i "$INVENTORY_FILE" $SCRIPT_DIR/playbooks/$1.yml
 }
 
 ### Main Lines ##################################################

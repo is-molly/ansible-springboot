@@ -1,6 +1,6 @@
 # debian系列特殊配置
-- import_tasks: debian.yml
-  when: 'ansible_distribution_file_variety in ["Debian"]'
+# - import_tasks: debian.yml
+#   when: 'ansible_distribution_file_variety in ["Debian"]'
 
 # redhat系列特殊配置
 - import_tasks: redhat.yml

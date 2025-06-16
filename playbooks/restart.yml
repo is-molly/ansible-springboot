@@ -1,0 +1,6 @@
+- hosts: all
+  serial: 1  # 滚动重启
+  roles:
+    - role: check_param
+    - role: stop
+    - role: start
