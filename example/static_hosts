@@ -1,3 +1,2 @@
 [springboot]
 dev.heluox.com ansible_user=root ansible_password=1234321
-192.168.101.155 ansible_user=root ansible_password=1234321

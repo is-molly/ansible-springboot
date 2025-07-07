@@ -1,52 +1,97 @@
 ---
-- name: Ensure service is started
-  ansible.builtin.systemd:
-    name: "{{ service.name }}"
-    state: started
-    daemon_reload: yes
-    enabled: yes
-  register: start_result
+- name: 启动服务
+  block:
+    - name: 执行服务启动
+      ansible.builtin.systemd:
+        name: "{{ service.name }}"
+        state: started
+        daemon_reload: yes
+        enabled: yes
+      register: start_result
+      failed_when: false
+      changed_when: start_result.changed
+    
+    - name: 验证服务状态
+      ansible.builtin.systemd:
+        name: "{{ service.name }}"
+      register: service_status
+      until: service_status.status.ActiveState == 'active'
+      retries: 12
+      delay: 5
+      ignore_errors: yes
+    
+    - name: 确认服务运行状态
+      ansible.builtin.fail:
+        msg: "服务启动失败，最终状态: {{ service_status.status.ActiveState }}"
+      when: service_status.status.ActiveState != 'active'
+  
+  always:
+    - name: 标记服务启动状态
+      ansible.builtin.set_fact:
+        service_was_started: "{{ start_result.changed }}"
+      when: start_result is defined
 
-# 只在服务状态改变时执行健康检查
-- name: Check if health check is required
+- name: 设置业务状态检查标志
+  ansible.builtin.set_fact:
+    biz_status_check_required: "{{
+      service.healthCheck is defined and
+      service.healthCheck.httpGet is defined and
+      service.healthCheck.httpGet.bizStatus is defined and
+      service.healthCheck.httpGet.bizStatus.statusKey is defined and
+      service.healthCheck.httpGet.bizStatus.successCode is defined
+    }}"
+
+# 服务成功启动时才需要健康检查
+- name: 判断是否需要健康检查
   ansible.builtin.set_fact:
     health_check_required: "{{
-      start_result.changed and
+      start_result.status.ActiveState == 'active' and
       service.healthCheck is defined and
       service.healthCheck.httpGet is defined and
       service.healthCheck.httpGet.port is defined and
       service.healthCheck.httpGet.path is defined
     }}"
 
-- name: Build health check URL if required
+- name: 构建健康检查URL
   ansible.builtin.set_fact:
     health_check_url: "{{ service.healthCheck.httpGet.scheme | default('http') }}://{{ ansible_host }}:{{ service.healthCheck.httpGet.port }}{{ service.healthCheck.httpGet.path }}"
   when: health_check_required | bool
 
-- name: Wait for service to become healthy
+- name: 等待服务健康
   block:
-    - name: Calculate health check parameters
+    - name: 计算重试参数
       ansible.builtin.set_fact:
-        total_retries: "{{ (service.healthCheck.timeoutSeconds | default(30) / service.healthCheck.periodSeconds | default(5)) | int }}"
-        delay_seconds: "{{ service.healthCheck.periodSeconds | default(5) }}"
-        success_threshold: "{{ service.healthCheck.successThreshold | default(1) }}"
-
-    - name: Perform health check (retry until success)
+        total_retries: "{{ (service.healthCheck.timeoutSeconds | default(30) / service.healthCheck.periodSeconds | default(5)) | int | abs }}"
+        delay_seconds: "{{ service.healthCheck.periodSeconds | default(5) | abs }}"
+      
+    - name: 执行健康检查
       ansible.builtin.uri:
         url: "{{ health_check_url }}"
         method: GET
         status_code: 200
-        timeout: "{{ service.healthCheck.timeoutSeconds | default(30) }}"
+        timeout: "{{ service.healthCheck.timeoutSeconds | default(30) | abs }}"
         body_format: json
+        return_content: yes
       register: health_result
-      until: health_result.status == 200
+      until: "health_result.status == 200 and (not biz_status_check_required | bool or (biz_status_check_required | bool and health_result.json[service.healthCheck.httpGet.bizStatus.statusKey] | string == service.healthCheck.httpGet.bizStatus.successCode | string))"
       retries: "{{ total_retries }}"
       delay: "{{ delay_seconds }}"
-      ignore_errors: yes
-      
-    - name: Fail if health check not passed
+      ignore_errors: true
+
+    - name: 验证健康检查结果
       ansible.builtin.fail:
-        msg: "Service health check failed after {{ total_retries }} attempts. Last status: {{ health_result.status }}"
-      when: health_result.status != 200
-      
+        msg: |
+          服务健康检查失败:
+          {% if health_result is defined and health_result.status != 200 %}
+          HTTP状态码错误: 期望200，实际{{ health_result.status }}
+          {% elif biz_status_check_required | bool and health_result is defined and health_result.json is defined %}
+          业务状态码错误: 字段[{{ service.healthCheck.httpGet.bizStatus.statusKey }}] 
+          期望{{ service.healthCheck.httpGet.bizStatus.successCode }}，实际{{ health_result.json[service.healthCheck.httpGet.bizStatus.statusKey] | default('(未找到)') }}
+          {% else %}
+          未知错误
+          {% endif %}
+      when: >
+        (health_result is defined and health_result.status != 200) or 
+        (biz_status_check_required | bool and health_result is defined and health_result.json is defined and 
+        health_result.json[service.healthCheck.httpGet.bizStatus.statusKey] | string != service.healthCheck.httpGet.bizStatus.successCode | string)
   when: health_check_required | bool

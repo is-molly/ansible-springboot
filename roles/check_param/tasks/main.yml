@@ -21,8 +21,8 @@
 - name: 检查端口参数有效性
   assert:
     that:
-      - item is number
-      - item >= 1
-      - item <= 65535
-    msg: "端口号必须为1-65535之间的数字"
+      - item is match('^[0-9]+/(TCP|UDP)$')
+      - item.split('/')[0] | int >= 1
+      - item.split('/')[0] | int <= 65535
+    msg: "端口格式必须为'端口号/TCP'或'端口号/UDP'，且端口号在1-65535之间"
   loop: "{{ service.port }}"

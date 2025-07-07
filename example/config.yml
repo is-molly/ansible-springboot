@@ -10,11 +10,12 @@ service:
   name: "heluox-agent"
   displayName: "heluox主机代理服务"
   version: "v1.0"
+  # 占用端口
   port:
-    - 8080
-    - 18080
+    - 8401/TCP
+    - 18401/TCP
   param:
-    jvmOpts: "-Xms2048m -Xmx2048m"
+    jvmOpts: "-Xms2048m -Xmx2048m -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=18401"
     mainArgs: ""
   path:
     artifactFile: "/opt/.heluox/repository/java/heluox-agent/v2/heluox-agent-2.0.0.jar"
@@ -24,7 +25,10 @@ service:
     httpGet:
       port: 8401
       path: "/test"
-      scheme: HTTP
+      scheme: "HTTP"
+      # bizStatus:
+        # statusKey: "code"
+        # successCode: "200"
     timeoutSeconds: 30                 # 超时时间
     periodSeconds: 5                   # 检测间隔
     successThreshold: 1                # 检查成功为 1 次表示就绪

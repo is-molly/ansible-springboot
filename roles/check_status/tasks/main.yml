@@ -1,73 +1,92 @@
 ---
-- name: Check service systemd status
+- name: 检查服务状态
   ansible.builtin.systemd:
     name: "{{ service.name }}"
   register: service_status
+  failed_when: false
+  check_mode: no
 
-- name: Extract service state
+- name: 设置服务状态变量
   ansible.builtin.set_fact:
-    service_state: "{{ service_status.status.ActiveState }}"
+    service_active: "{{ service_status.status.ActiveState == 'active' }}"
 
-# 检查是否需要健康检查
-- name: Check if health check is required
+- name: 检查端口监听状态
+  ansible.builtin.shell: |
+    {% if item.endswith('/TCP') %}
+    netstat -tln | awk -v port={{ item.split('/')[0] }} 'BEGIN {found=0} $4 ~ ":"port"$" {found=1} END {exit !found}'
+    {% else %}
+    netstat -uln | awk -v port={{ item.split('/')[0] }} 'BEGIN {found=0} $4 ~ ":"port"$" {found=1} END {exit !found}'
+    {% endif %}
+  register: port_checks
+  loop: "{{ service.port }}"
+  ignore_errors: yes
+  changed_when: false
+  when: service_active
+
+- name: 收集未监听端口
   ansible.builtin.set_fact:
-    health_check_required: "{{
-      service_state == 'active' and
-      service.healthCheck is defined and
-      service.healthCheck.httpGet is defined and
-      service.healthCheck.httpGet.port is defined and
-      service.healthCheck.httpGet.path is defined
+    missing_ports: "{{ port_checks.results | selectattr('rc', '!=', 0) | map(attribute='item') | list }}"
+  when: service_active
+
+- name: 判断是否需要检查业务状态码
+  ansible.builtin.set_fact:
+    biz_status_check_required: "{{
+      service.healthCheck.httpGet.bizStatus is defined and
+      service.healthCheck.httpGet.bizStatus.statusKey is defined and
+      service.healthCheck.httpGet.bizStatus.successCode is defined
     }}"
 
-# 构建健康检查URL（如果需要）
-- name: Build health check URL
-  ansible.builtin.set_fact:
-    health_check_url: "{{ service.healthCheck.httpGet.scheme | default('http') }}://{{ ansible_host }}:{{ service.healthCheck.httpGet.port }}{{ service.healthCheck.httpGet.path }}"
-  when: health_check_required | bool
-
-# 执行健康检查（如果需要）
-- name: Perform health check
+- name: 执行HttpGet健康检查
   ansible.builtin.uri:
-    url: "{{ health_check_url }}"
+    url: "{{ service.healthCheck.httpGet.scheme | default('http') }}://{{ ansible_host }}:{{ service.healthCheck.httpGet.port }}{{ service.healthCheck.httpGet.path }}"
     method: GET
     return_content: yes
     status_code: 200
-    timeout: "{{ service.healthCheck.timeoutSeconds | default(30) }}"
+    timeout: "{{ service.healthCheck.timeoutSeconds | default(5) }}"
     body_format: json
   register: health_result
   ignore_errors: yes
-  when: health_check_required | bool
+  when: >
+    service_active and
+    (missing_ports | default([]) | length == 0) and
+    service.healthCheck.httpGet.port is defined and
+    service.healthCheck.httpGet.path is defined
 
-# 设置健康状态码和消息
-- name: Set health status code and message
+- name: 获取消息体业务状态码
   ansible.builtin.set_fact:
-    health_code: >
-      {% if service_state != 'active' %}3
-      {% elif not health_check_required | bool %}1
-      {% elif health_result.status == 200 %}0
-      {% else %}2
-      {% endif %}
-    health_message: >
-      {% if service_state != 'active' %}Service not running
-      {% elif not health_check_required | bool %}Running (no health check configured)
-      {% elif health_result.status == 200 %}Healthy
-      {% else %}Unhealthy: {{ health_result.msg | default('Health check failed') }}
+    biz_status_code: "{{
+      health_result.json[service.healthCheck.httpGet.bizStatus.statusKey] | default('')
+    }}"
+  when: >
+    biz_status_check_required and
+    health_result is defined and
+    health_result.json is defined
+
+- name: 生成最终结果
+  ansible.builtin.set_fact:
+    status_result: >-
+      {% if not service_active %}
+        {"code":1,"err_msg":"服务未运行"}
+      {% elif missing_ports | default([]) | length > 0 %}
+        {"code":1,"err_msg":"端口未监听: {{ missing_ports | join(',') }}"}
+      {% elif health_result is defined %}
+        {% if health_result.status != 200 %}
+          {"code":1,"err_msg":"健康检查失败(HTTP {{ health_result.status }}): {{ health_result.msg | default('无响应') }}"}
+        {% elif biz_status_check_required %}
+          {% if biz_status_code is not defined %}
+            {"code":1,"err_msg":"业务状态码检查失败: 响应中缺少字段 '{{ service.healthCheck.httpGet.bizStatus.statusKey }}'"}
+          {% elif biz_status_code | string != service.healthCheck.httpGet.bizStatus.successCode | string %}
+            {"code":1,"err_msg":"业务状态码不匹配: 期望 {{ service.healthCheck.httpGet.bizStatus.successCode }} 实际 {{ biz_status_code }}"}
+          {% else %}
+            {"code":0,"err_msg":""}
+          {% endif %}
+        {% else %}
+          {"code":0,"err_msg":""}
+        {% endif %}
+      {% else %}
+        {"code":0,"err_msg":""}
       {% endif %}
 
-# 输出JSON格式的状态
 - name: Output to program
   ansible.builtin.debug:
-    msg: >
-      {
-        "service": "{{ service.name }}",
-        "systemd_status": "{{ service_state }}",
-        "health_code": {{ health_code }},
-        "health_message": "{{ health_message | replace('"', '\\"') }}",
-        {% if health_check_url is defined %}
-        "health_check_url": "{{ health_check_url }}",
-        {% endif %}
-        "health_check_result": {
-          "status_code": {{ health_result.status | default(-1) }},
-          "response": {{ health_result.content | default('') | to_json }}
-        }
-      }
+    msg: "{{ status_result }}"
