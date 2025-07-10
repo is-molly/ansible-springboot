@@ -58,31 +58,35 @@
 ```yml
 # 环境配置
 env:
-  basePath: /opt/example
+  basePath: /opt/.heluox
   java:
     version: "17"
     home: "/usr/lib/jvm/java-17-openjdk-17.0.15.0.6-2.el9.aarch64"
 
 # 服务元数据
 service:
-  name: "example-app"
+  name: "heluox-agent"
   displayName: "heluox主机代理服务"
   version: "v1.0"
+  # 占用端口
   port:
-    - 8080
-    - 18080
+    - 8401/TCP
+    - 18401/TCP
   param:
-    jvmOpts: "-Xms512m -Xmx512m"
+    jvmOpts: "-Xms2048m -Xmx2048m -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=18401"
     mainArgs: ""
   path:
-    artifactFile: "/opt/example/repository/java/example-app/v1/example-app-1.0.0.jar"
+    repoFile: "/opt/.heluox/repository/java/heluox-agent/v2/heluox-agent-2.0.0.jar"
     installDir: ""
     logDir: ""
   healthCheck:
     httpGet:
-      port: 8080
+      port: 8401
       path: "/test"
-      scheme: HTTP
+      scheme: "HTTP"
+      bizStatus:
+        statusKey: "code"
+        successCode: "200"
     timeoutSeconds: 30                 # 超时时间
     periodSeconds: 5                   # 检测间隔
     successThreshold: 1                # 检查成功为 1 次表示就绪

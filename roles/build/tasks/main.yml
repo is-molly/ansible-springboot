@@ -7,14 +7,14 @@
 # 在控制节点上检查源文件是否存在
 - name: 验证控制节点上的JAR文件存在
   stat:
-    path: "{{ service.path.artifactFile }}"
+    path: "{{ service.path.repoFile }}"
   register: local_jar_stat
   delegate_to: localhost
   run_once: true
 
 - name: 如果源文件不存在则报错
   fail:
-    msg: "控制节点上的JAR文件不存在: {{ service.path.artifactFile }}"
+    msg: "控制节点上的JAR文件不存在: {{ service.path.repoFile }}"
   when: not local_jar_stat.stat.exists
   delegate_to: localhost
   run_once: true
@@ -52,7 +52,7 @@
 # 直接从控制节点复制JAR文件到目标机器
 - name: 复制应用JAR文件
   copy:
-    src: "{{ service.path.artifactFile }}"
+    src: "{{ service.path.repoFile }}"
     dest: "{{ service_path_installDir }}/"
     owner: root
     group: root

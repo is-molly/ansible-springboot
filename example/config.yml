@@ -18,7 +18,7 @@ service:
     jvmOpts: "-Xms2048m -Xmx2048m -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=18401"
     mainArgs: ""
   path:
-    artifactFile: "/opt/.heluox/repository/java/heluox-agent/v2/heluox-agent-2.0.0.jar"
+    repoFile: "/opt/.heluox/repository/java/heluox-agent/v2/heluox-agent-2.0.0.jar"
     installDir: ""
     logDir: ""
   healthCheck:
@@ -26,9 +26,9 @@ service:
       port: 8401
       path: "/test"
       scheme: "HTTP"
-      # bizStatus:
-        # statusKey: "code"
-        # successCode: "200"
+      bizStatus:
+        statusKey: "code"
+        successCode: "200"
     timeoutSeconds: 30                 # 超时时间
     periodSeconds: 5                   # 检测间隔
     successThreshold: 1                # 检查成功为 1 次表示就绪

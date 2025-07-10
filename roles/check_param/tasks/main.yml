@@ -15,7 +15,7 @@
       - service.param is defined and service.param
       - service.param.jvmOpts is defined and service.param.jvmOpts | length > 0
       - service.path is defined and service.path
-      - service.path.artifactFile is defined and service.path.artifactFile | length > 0
+      - service.path.repoFile is defined and service.path.repoFile | length > 0
     msg: "必需参数不能为空"
 
 - name: 检查端口参数有效性
