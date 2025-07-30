@@ -1,0 +1,8 @@
+- hosts: all
+  tasks:
+    - name: Include roles dynamically
+      include_role:
+        name: "{{ test_role }}"
+      loop: "{{ test_roles }}"
+      loop_control:
+        loop_var: test_role

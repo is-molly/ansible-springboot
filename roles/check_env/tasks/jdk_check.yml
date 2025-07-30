@@ -16,39 +16,45 @@
 
 - name: 检查候选路径是否存在
   stat:
-    path: "{{ item }}/bin/java"
+    path: "{{ java_path }}/bin/java"
   register: java_path_checks
   loop: "{{ candidate_java_homes }}"
+  loop_control:
+    loop_var: java_path
   ignore_errors: yes
 
 - name: 提取有效的候选路径
   set_fact:
-    valid_java_homes: "{{ java_path_checks.results | selectattr('stat.exists') | map(attribute='item') | list }}"
+    valid_java_homes: "{{ java_path_checks.results | selectattr('stat.exists') | map(attribute='java_path') | list }}"
 
 - name: 验证Java安装
   block:
     - name: 测试候选Java版本
-      command: "{{ item }}/bin/java -version"
+      command: "{{ java_home }}/bin/java -version"
       register: java_test
       changed_when: false
       ignore_errors: yes
       loop: "{{ valid_java_homes }}"
+      loop_control:
+        loop_var: java_home
     
     - name: 提取匹配版本的有效路径
       set_fact:
-        effective_java_home: "{{ item.item }}"
+        effective_java_home: "{{ result.java_home }}"
         java_version: >-
-          {% set version_lines = item.stderr.split('\n') | default([]) %}
+          {% set version_lines = result.stderr.split('\n') | default([]) %}
           {% for line in version_lines %}
             {% if 'version' in line %}
               {{ line.split('"')[1] | default('unknown') }}
             {% endif %}
           {% endfor %}
       when: 
-        - not item.failed
-        - item.stderr is defined
-        - (' version "' + env.java.version + '.') in item.stderr
+        - not result.failed
+        - result.stderr is defined
+        - (' version "' + env.java.version + '.') in result.stderr
       loop: "{{ java_test.results }}"
+      loop_control:
+        loop_var: result
   
 - name: 验证Java安装结果
   assert:

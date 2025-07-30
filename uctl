@@ -1,0 +1,117 @@
+#!/bin/bash
+
+set -o nounset
+set -o errexit
+
+VERSION="v1.0.0_250616"
+
+SCRIPT_DIR=$(dirname "$0")
+SCRIPT_NAME=$(basename "$0")
+CONFIG_FILE=""
+INVENTORY_FILE=""
+ACTION=""
+
+cd "${SCRIPT_DIR}" || exit 1
+
+function usage() {
+    echo -e "\033[33mUsage:\033[0m $SCRIPT_NAME ACTION -i INVENTORY_FILE -c CONFIG_FILE"
+    cat <<EOF
+-------------------------------------------------------------------------------------
+Ansible SpringBoot OPS [$VERSION]:
+    ACTION must be composed of n role names, e.g:  check_param,check_env
+
+    Options:
+        -i INVENTORY_FILE  specify ansible inventory file (required)
+        -c CONFIG_FILE     specify config file (required)
+EOF
+}
+
+function logger() {
+    TIMESTAMP=$(date +'%Y-%m-%d %H:%M:%S')
+    local FNAME=$(basename "${BASH_SOURCE[1]}")
+    local SOURCE="\033[36m[$FNAME:${BASH_LINENO[0]}]\033[0m"
+    case "$1" in
+        debug)
+            echo -e "\033[36m$TIMESTAMP\033[0m $SOURCE \033[36m[DEBUG] $2\033[0m"
+            ;;
+        info)
+            echo -e "\033[36m$TIMESTAMP\033[0m $SOURCE \033[32m[INFO] $2\033[0m"
+            ;;
+        warn)
+            echo -e "\033[36m$TIMESTAMP\033[0m $SOURCE \033[33m[WARN] $2\033[0m"
+            ;;
+        error)
+            echo -e "\033[36m$TIMESTAMP\033[0m $SOURCE \033[31m[ERROR] $2\033[0m"
+            ;;
+        *) ;;
+    esac
+}
+
+function action() {
+  local actions=($(echo $ACTION | tr ',' ' '))
+  local actionsJson="{\"test_roles\": [$(printf '"%s", ' "${actions[@]}" | sed 's/, $//')]}"
+  ansible-playbook -e "@$CONFIG_FILE" -i "$INVENTORY_FILE" --extra-vars "$actionsJson" $SCRIPT_DIR/test/playbooks/test.yml
+}
+
+### Main Lines ##################################################
+function main() {
+  # check bash shell
+  readlink /proc/$$/exe|grep -q "bash" || { logger error "you should use bash shell only"; exit 1; }
+
+  # check 'ansible-playbook' executable
+  which ansible > /dev/null 2>&1 || { logger error "need 'ansible', try: 'pip install ansible'"; usage; exit 1; }
+
+  # First argument must be the action
+  if [[ $# -eq 0 ]]; then
+    usage
+    exit 1
+  fi
+
+  ACTION=$1
+  shift  # Remove action from arguments list
+
+  # Parse remaining options
+  while getopts ":i:c:" opt; do
+    case $opt in
+      i)
+        INVENTORY_FILE=$OPTARG
+        ;;
+      c)
+        CONFIG_FILE=$OPTARG
+        ;;
+      \?)
+        logger error "Invalid option: -$OPTARG"
+        usage
+        exit 1
+        ;;
+      :)
+        logger error "Option -$OPTARG requires an argument."
+        usage
+        exit 1
+        ;;
+    esac
+  done
+
+  # Check required arguments
+  if [[ -z "$INVENTORY_FILE" || -z "$CONFIG_FILE" ]]; then
+    logger error "Missing required arguments"
+    usage
+    exit 1
+  fi
+
+  # Check files exist
+  [ ! -e "$CONFIG_FILE" ] && { logger error "config file [ $CONFIG_FILE ] not exist"; exit 1; }
+  [ ! -e "$INVENTORY_FILE" ] && { logger error "inventory file [ $INVENTORY_FILE ] not exist"; exit 1; }
+
+  for i in $(echo $ACTION | tr ',' ' ');do
+    if [[ $i = "" ]] || [ ! -e roles/$i ];then
+      logger error "Invalid action: $ACTION"
+      usage
+      exit 1
+    fi
+  done
+  
+  action
+}
+
+main "$@"

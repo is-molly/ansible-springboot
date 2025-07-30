@@ -12,13 +12,15 @@
 
 - name: 检查端口监听状态
   ansible.builtin.shell: |
-    {% if item.endswith('/TCP') %}
-    netstat -tln | awk -v port={{ item.split('/')[0] }} 'BEGIN {found=0} $4 ~ ":"port"$" {found=1} END {exit !found}'
+    {% if service_port.endswith('/TCP') %}
+    netstat -tln | awk -v port={{ service_port.split('/')[0] }} 'BEGIN {found=0} $4 ~ ":"port"$" {found=1} END {exit !found}'
     {% else %}
-    netstat -uln | awk -v port={{ item.split('/')[0] }} 'BEGIN {found=0} $4 ~ ":"port"$" {found=1} END {exit !found}'
+    netstat -uln | awk -v port={{ service_port.split('/')[0] }} 'BEGIN {found=0} $4 ~ ":"port"$" {found=1} END {exit !found}'
     {% endif %}
   register: port_checks
   loop: "{{ service.port }}"
+  loop_control:
+    loop_var: service_port
   ignore_errors: yes
   changed_when: false
   when: service_active
