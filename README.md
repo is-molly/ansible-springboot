@@ -92,3 +92,20 @@ service:
     successThreshold: 1                # 检查成功为 1 次表示就绪
     failureThreshold: 2                # 检测失败 2 次表示未就绪
 ```
+
+## 单元测试
+
+### 执行程序 `uctl`
+
+`uctl` 是本项目的role单元测试脚本程序，可以任意组合与执行一个或多个role，使程序debug更加方便快捷。
+
+#### 基本命令格式
+
+```shell
+# 下面roles是由多个以逗号分隔role名，eg: check_param,check_env
+./xctl <roles> -i <inventory_file> -c <config_file>
+```
+
+#### 支持的 roles
+
+见源码roles目录
